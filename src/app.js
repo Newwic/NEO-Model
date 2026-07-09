@@ -11,6 +11,9 @@ const statusText = document.querySelector("#statusText");
 const progressFill = document.querySelector("#progressFill");
 const fileInput = document.querySelector("#fileInput");
 const dropHint = document.querySelector("#dropHint");
+const settingsPanel = document.querySelector("#settingsPanel");
+const settingsButton = document.querySelector("#settingsButton");
+const closePanelButton = document.querySelector("#closePanelButton");
 const trianglesValue = document.querySelector("#trianglesValue");
 const meshesValue = document.querySelector("#meshesValue");
 const sizeValue = document.querySelector("#sizeValue");
@@ -283,6 +286,10 @@ function bindUi() {
   document.querySelector("#loadButton").addEventListener("click", () => fileInput.click());
   document.querySelector("#resetButton").addEventListener("click", resetView);
   document.querySelector("#shotButton").addEventListener("click", saveScreenshot);
+  settingsButton.addEventListener("click", () => {
+    setSettingsPanelOpen(!settingsPanel.classList.contains("open"));
+  });
+  closePanelButton.addEventListener("click", () => setSettingsPanelOpen(false));
   document.querySelector("#fullButton").addEventListener("click", () => {
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -350,6 +357,17 @@ function bindUi() {
     dropHint.classList.remove("visible");
     openLocalFile(event.dataTransfer.files?.[0]);
   });
+
+  window.addEventListener("hashchange", syncPanelFromHash);
+}
+
+function setSettingsPanelOpen(open) {
+  settingsPanel.classList.toggle("open", open);
+  settingsButton.setAttribute("aria-expanded", String(open));
+}
+
+function syncPanelFromHash() {
+  setSettingsPanelOpen(window.location.hash === "#settings");
 }
 
 function resize() {
@@ -368,6 +386,7 @@ function animate() {
 
 window.addEventListener("resize", resize);
 bindUi();
+syncPanelFromHash();
 if (window.lucide) window.lucide.createIcons();
 loadModel(DEFAULT_MODEL_URL, "Untitled.glb");
 animate();

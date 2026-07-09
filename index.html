@@ -37,13 +37,23 @@
           <button class="icon-button" id="shotButton" type="button" title="Save screenshot">
             <i data-lucide="camera"></i>
           </button>
+          <button class="icon-button" id="settingsButton" type="button" title="Settings" aria-expanded="false">
+            <i data-lucide="sliders-horizontal"></i>
+          </button>
           <button class="icon-button" id="fullButton" type="button" title="Fullscreen">
             <i data-lucide="maximize-2"></i>
           </button>
         </div>
       </header>
 
-      <section class="side-panel" aria-label="Model settings">
+      <section class="side-panel" id="settingsPanel" aria-label="Model settings">
+        <div class="panel-titlebar">
+          <span>Settings</span>
+          <button class="panel-close" id="closePanelButton" type="button" title="Close settings">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
         <div class="panel-section">
           <div class="section-heading">
             <span>Mode</span>

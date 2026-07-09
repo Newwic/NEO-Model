@@ -21,3 +21,8 @@ http://127.0.0.1:5177/
 - `assets/source.blend` - original Blender source file from the upload.
 - `index.html`, `styles.css`, `src/app.js` - viewer page.
 
+## Mobile
+
+- The model opens full-screen first.
+- Tap the sliders icon to open settings.
+- Add `#settings` to the URL to open the settings drawer directly.
