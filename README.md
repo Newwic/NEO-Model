@@ -2,6 +2,12 @@
 
 Static Three.js viewer for the GLB model uploaded on 2026-07-09.
 
+Live site:
+
+```text
+https://newwic.github.io/NEO-Model/
+```
+
 ## Run
 
 ```powershell
