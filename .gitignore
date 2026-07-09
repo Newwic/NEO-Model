@@ -1,0 +1,13 @@
+# Runtime logs
+*.log
+*.err.log
+
+# Generated verification captures
+verify_*.png
+
+# Local bundles
+*.zip
+
+# Source project files kept local unless intentionally published
+assets/source.blend
+

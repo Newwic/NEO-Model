@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEO 3D Viewer</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main class="viewer-shell">
+      <canvas id="viewer"></canvas>
+
+      <header class="topbar" aria-label="Viewer controls">
+        <div class="identity">
+          <span class="mark" aria-hidden="true"></span>
+          <div>
+            <h1>NEO 3D Viewer</h1>
+            <p id="modelName">Untitled model</p>
+          </div>
+        </div>
+
+        <div class="icon-row">
+          <button class="icon-button" id="loadButton" type="button" title="Load GLB">
+            <i data-lucide="folder-open"></i>
+          </button>
+          <button class="icon-button" id="resetButton" type="button" title="Reset view">
+            <i data-lucide="rotate-ccw"></i>
+          </button>
+          <button class="icon-button" id="shotButton" type="button" title="Save screenshot">
+            <i data-lucide="camera"></i>
+          </button>
+          <button class="icon-button" id="fullButton" type="button" title="Fullscreen">
+            <i data-lucide="maximize-2"></i>
+          </button>
+        </div>
+      </header>
+
+      <section class="side-panel" aria-label="Model settings">
+        <div class="panel-section">
+          <div class="section-heading">
+            <span>Mode</span>
+          </div>
+          <div class="segmented" role="group" aria-label="Material mode">
+            <button class="segment active" type="button" data-mode="original">Original</button>
+            <button class="segment" type="button" data-mode="studio">Studio</button>
+            <button class="segment" type="button" data-mode="xray">X-ray</button>
+          </div>
+        </div>
+
+        <div class="panel-section compact">
+          <label class="toggle">
+            <input id="rotateToggle" type="checkbox" checked />
+            <span>Auto rotate</span>
+          </label>
+          <label class="toggle">
+            <input id="gridToggle" type="checkbox" checked />
+            <span>Grid</span>
+          </label>
+          <label class="toggle">
+            <input id="wireToggle" type="checkbox" />
+            <span>Wireframe</span>
+          </label>
+        </div>
+
+        <div class="panel-section">
+          <label class="slider-row" for="exposureSlider">
+            <span>Exposure</span>
+            <output id="exposureValue">1.00</output>
+          </label>
+          <input id="exposureSlider" min="0.6" max="1.8" step="0.01" value="1.0" type="range" />
+
+          <label class="slider-row" for="keySlider">
+            <span>Key light</span>
+            <output id="keyValue">2.30</output>
+          </label>
+          <input id="keySlider" min="0" max="4" step="0.05" value="2.3" type="range" />
+
+          <label class="slider-row" for="ambientSlider">
+            <span>Ambient</span>
+            <output id="ambientValue">1.10</output>
+          </label>
+          <input id="ambientSlider" min="0" max="3" step="0.05" value="1.1" type="range" />
+        </div>
+
+        <dl class="stats">
+          <div>
+            <dt>Triangles</dt>
+            <dd id="trianglesValue">-</dd>
+          </div>
+          <div>
+            <dt>Meshes</dt>
+            <dd id="meshesValue">-</dd>
+          </div>
+          <div>
+            <dt>Size</dt>
+            <dd id="sizeValue">-</dd>
+          </div>
+        </dl>
+      </section>
+
+      <footer class="status-bar">
+        <div class="progress-track" aria-hidden="true">
+          <span id="progressFill"></span>
+        </div>
+        <span id="statusText">Loading model</span>
+      </footer>
+
+      <input id="fileInput" type="file" accept=".glb,.gltf,model/gltf-binary,model/gltf+json" hidden />
+      <div class="drop-hint" id="dropHint">Drop GLB here</div>
+    </main>
+
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
