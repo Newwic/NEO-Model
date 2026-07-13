@@ -83,6 +83,7 @@ scene.add(grid);
 let currentModel = null;
 let currentObjectUrl = null;
 let currentMode = "original";
+let resizeTimer = null;
 const meshRecords = [];
 
 const studioMaterial = new THREE.MeshStandardMaterial({
@@ -102,6 +103,7 @@ const xrayMaterial = new THREE.MeshPhysicalMaterial({
 });
 
 function setStatus(text, progress = null) {
+  statusText.style.color = "";
   statusText.textContent = text;
   if (progress !== null) {
     progressFill.style.width = `${Math.max(0, Math.min(100, progress))}%`;
@@ -161,6 +163,16 @@ function updateStats(object) {
   sizeValue.textContent = `${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`;
 }
 
+function getFrameDistance(size) {
+  const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+  const fitFov = Math.max(0.01, Math.min(verticalFov, horizontalFov));
+  const radius = Math.max(size.length() / 2, 0.1);
+  const margin = window.innerWidth <= 760 ? 1.02 : 1.08;
+
+  return (radius / Math.sin(fitFov / 2)) * margin;
+}
+
 function frameObject(object) {
   const box = new THREE.Box3().setFromObject(object);
   const center = new THREE.Vector3();
@@ -180,11 +192,11 @@ function frameObject(object) {
   grid.position.y = ground.position.y + maxDim * 0.012;
   grid.scale.setScalar(Math.max(maxDim / 4, 0.25));
 
-  const fov = THREE.MathUtils.degToRad(camera.fov);
-  const distance = Math.abs(maxDim / Math.sin(fov / 2)) * 0.72;
+  const distance = getFrameDistance(normalizedSize);
+  const cameraDirection = new THREE.Vector3(0.86, 0.64, 0.72).normalize();
   camera.near = Math.max(distance / 100, 0.01);
   camera.far = distance * 120;
-  camera.position.set(distance * 0.86, distance * 0.64, distance * 0.72);
+  camera.position.copy(cameraDirection.multiplyScalar(distance));
   camera.updateProjectionMatrix();
 
   controls.target.set(0, normalizedSize.y * 0.04, 0);
@@ -376,6 +388,11 @@ function resize() {
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
+
+  if (currentModel) {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => frameObject(currentModel), 120);
+  }
 }
 
 function animate() {
