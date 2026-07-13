@@ -542,6 +542,8 @@ input[type="range"] {
     top: 78px;
     width: auto;
     padding: 12px;
+    max-height: 36vh;
+    overflow: auto;
   }
 
   .selection-titlebar strong {
@@ -595,10 +597,6 @@ input[type="range"] {
 
   .side-panel {
     max-height: min(70vh, 560px);
-  }
-
-  .selection-stats {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .segmented {

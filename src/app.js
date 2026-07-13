@@ -25,6 +25,7 @@ const selectedSize = document.querySelector("#selectedSize");
 const selectedPosition = document.querySelector("#selectedPosition");
 const focusSelectedButton = document.querySelector("#focusSelectedButton");
 const clearSelectedButton = document.querySelector("#clearSelectedButton");
+const playButton = document.querySelector("#playButton");
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -98,6 +99,7 @@ let resizeTimer = null;
 let selectedMesh = null;
 let selectionBox = null;
 let pointerStart = null;
+let isolateMode = false;
 const meshRecords = [];
 const dropRecords = [];
 let dropStartedAt = null;
@@ -153,6 +155,7 @@ function disposeObject(object) {
 }
 
 function clearModel() {
+  exitIsolation();
   clearSelection();
   if (currentModel) {
     scene.remove(currentModel);
@@ -178,6 +181,10 @@ function getTriangleCount(geometry) {
 
 function formatVector(vector) {
   return `${vector.x.toFixed(2)}, ${vector.y.toFixed(2)}, ${vector.z.toFixed(2)}`;
+}
+
+function getReadyStatus() {
+  return dropRecords.length ? `${dropRecords.length} pellets - Play / Spacebar to drop` : "Ready";
 }
 
 function isSelectableMesh(mesh) {
@@ -265,6 +272,13 @@ function clearSelection() {
   if (selectionPanel) selectionPanel.hidden = true;
 }
 
+function exitIsolation() {
+  isolateMode = false;
+  for (const mesh of meshRecords) mesh.visible = true;
+  ground.visible = document.querySelector("#gridToggle")?.checked ?? true;
+  grid.visible = document.querySelector("#gridToggle")?.checked ?? true;
+}
+
 function updateSelectionPanel(mesh) {
   const box = new THREE.Box3().setFromObject(mesh);
   const size = new THREE.Vector3();
@@ -291,10 +305,11 @@ function selectMesh(mesh) {
   selectionBox.renderOrder = 999;
   scene.add(selectionBox);
   updateSelectionPanel(mesh);
+  isolateSelectedMesh();
   setStatus(`Selected ${mesh.name || "mesh"}`, 100);
 }
 
-function focusSelectedMesh() {
+function focusSelectedMesh(zoom = 1.15) {
   if (!selectedMesh) return;
 
   const box = new THREE.Box3().setFromObject(selectedMesh);
@@ -303,14 +318,25 @@ function focusSelectedMesh() {
   box.getCenter(center);
   box.getSize(size);
 
-  const distance = getFrameDistance(size) * 1.15;
+  const distance = getFrameDistance(size) * zoom;
   const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
   camera.position.copy(center).add(direction.multiplyScalar(distance));
   controls.target.copy(center);
   camera.near = Math.max(distance / 100, 0.01);
   camera.far = Math.max(distance * 120, camera.far);
+  controls.minDistance = Math.max(distance * 0.08, 0.02);
+  controls.maxDistance = Math.max(distance * 8, 1);
   camera.updateProjectionMatrix();
   controls.update();
+}
+
+function isolateSelectedMesh() {
+  if (!selectedMesh) return;
+  isolateMode = true;
+  for (const mesh of meshRecords) mesh.visible = mesh === selectedMesh;
+  ground.visible = true;
+  grid.visible = true;
+  focusSelectedMesh(0.72);
 }
 
 function pickMesh(event) {
@@ -330,7 +356,8 @@ function pickMesh(event) {
     selectMesh(hit.object);
   } else {
     clearSelection();
-    setStatus(dropRecords.length ? `${dropRecords.length} pellets - Spacebar to drop` : "Ready", 100);
+    exitIsolation();
+    setStatus(getReadyStatus(), 100);
   }
 }
 
@@ -408,6 +435,8 @@ function startDropAnimation() {
     return;
   }
 
+  exitIsolation();
+  clearSelection();
   resetDropObjects();
   dropStartedAt = clock.getElapsedTime();
   controls.autoRotate = false;
@@ -480,7 +509,7 @@ function loadModel(url, name = "Untitled model") {
       updateStats(object);
       applyMode(currentMode);
       modelName.textContent = name;
-      setStatus(dropRecords.length ? `${dropRecords.length} pellets - Spacebar to drop` : "Ready", 100);
+      setStatus(getReadyStatus(), 100);
       if (dropRecords.length && window.location.hash === "#drop") {
         window.setTimeout(startDropAnimation, 250);
       }
@@ -503,9 +532,11 @@ function loadModel(url, name = "Untitled model") {
 
 function resetView() {
   if (!currentModel) return;
+  exitIsolation();
+  clearSelection();
   resetDropObjects();
   frameObject(currentModel);
-  setStatus(dropRecords.length ? `${dropRecords.length} pellets - Spacebar to drop` : "Ready", 100);
+  setStatus(getReadyStatus(), 100);
 }
 
 function saveScreenshot() {
@@ -527,10 +558,12 @@ function bindUi() {
   document.querySelector("#loadButton").addEventListener("click", () => fileInput.click());
   document.querySelector("#resetButton").addEventListener("click", resetView);
   document.querySelector("#shotButton").addEventListener("click", saveScreenshot);
-  focusSelectedButton.addEventListener("click", focusSelectedMesh);
+  playButton.addEventListener("click", startDropAnimation);
+  focusSelectedButton.addEventListener("click", isolateSelectedMesh);
   clearSelectedButton.addEventListener("click", () => {
+    exitIsolation();
     clearSelection();
-    setStatus(dropRecords.length ? `${dropRecords.length} pellets - Spacebar to drop` : "Ready", 100);
+    setStatus(getReadyStatus(), 100);
   });
   settingsButton.addEventListener("click", () => {
     setSettingsPanelOpen(!settingsPanel.classList.contains("open"));
