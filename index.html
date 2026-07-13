@@ -116,6 +116,42 @@
         </dl>
       </section>
 
+      <section class="selection-panel" id="selectionPanel" aria-label="Selected part" hidden>
+        <div class="selection-titlebar">
+          <div>
+            <span>Selection</span>
+            <strong id="selectedName">-</strong>
+          </div>
+          <div class="selection-actions">
+            <button class="panel-close" id="focusSelectedButton" type="button" title="Focus selected part">
+              <i data-lucide="crosshair"></i>
+            </button>
+            <button class="panel-close" id="clearSelectedButton" type="button" title="Clear selection">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+        </div>
+
+        <dl class="selection-stats">
+          <div>
+            <dt>Type</dt>
+            <dd id="selectedType">-</dd>
+          </div>
+          <div>
+            <dt>Triangles</dt>
+            <dd id="selectedTriangles">-</dd>
+          </div>
+          <div>
+            <dt>Size</dt>
+            <dd id="selectedSize">-</dd>
+          </div>
+          <div>
+            <dt>Position</dt>
+            <dd id="selectedPosition">-</dd>
+          </div>
+        </dl>
+      </section>
+
       <footer class="status-bar">
         <div class="progress-track" aria-hidden="true">
           <span id="progressFill"></span>

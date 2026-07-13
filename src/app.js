@@ -17,6 +17,14 @@ const closePanelButton = document.querySelector("#closePanelButton");
 const trianglesValue = document.querySelector("#trianglesValue");
 const meshesValue = document.querySelector("#meshesValue");
 const sizeValue = document.querySelector("#sizeValue");
+const selectionPanel = document.querySelector("#selectionPanel");
+const selectedName = document.querySelector("#selectedName");
+const selectedType = document.querySelector("#selectedType");
+const selectedTriangles = document.querySelector("#selectedTriangles");
+const selectedSize = document.querySelector("#selectedSize");
+const selectedPosition = document.querySelector("#selectedPosition");
+const focusSelectedButton = document.querySelector("#focusSelectedButton");
+const clearSelectedButton = document.querySelector("#clearSelectedButton");
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -81,10 +89,15 @@ grid.position.y = 0.002;
 scene.add(grid);
 
 const clock = new THREE.Clock();
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
 let currentModel = null;
 let currentObjectUrl = null;
 let currentMode = "original";
 let resizeTimer = null;
+let selectedMesh = null;
+let selectionBox = null;
+let pointerStart = null;
 const meshRecords = [];
 const dropRecords = [];
 let dropStartedAt = null;
@@ -104,6 +117,13 @@ const xrayMaterial = new THREE.MeshPhysicalMaterial({
   opacity: 0.36,
   side: THREE.DoubleSide,
   depthWrite: false,
+});
+
+const selectionMaterial = new THREE.LineBasicMaterial({
+  color: 0x51f2df,
+  depthTest: false,
+  transparent: true,
+  opacity: 0.92,
 });
 
 function setStatus(text, progress = null) {
@@ -133,6 +153,7 @@ function disposeObject(object) {
 }
 
 function clearModel() {
+  clearSelection();
   if (currentModel) {
     scene.remove(currentModel);
     disposeObject(currentModel);
@@ -148,6 +169,21 @@ function formatNumber(value) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 }
 
+function getTriangleCount(geometry) {
+  if (!geometry) return 0;
+  if (geometry.index) return geometry.index.count / 3;
+  if (geometry.attributes.position) return geometry.attributes.position.count / 3;
+  return 0;
+}
+
+function formatVector(vector) {
+  return `${vector.x.toFixed(2)}, ${vector.y.toFixed(2)}, ${vector.z.toFixed(2)}`;
+}
+
+function isSelectableMesh(mesh) {
+  return mesh?.isMesh && !/^(studio_)?floor$|ground|grid/i.test(mesh.name || "");
+}
+
 function updateStats(object) {
   let triangles = 0;
   let meshes = 0;
@@ -155,11 +191,7 @@ function updateStats(object) {
     if (!child.isMesh) return;
     meshes += 1;
     const geometry = child.geometry;
-    if (geometry.index) {
-      triangles += geometry.index.count / 3;
-    } else if (geometry.attributes.position) {
-      triangles += geometry.attributes.position.count / 3;
-    }
+    triangles += getTriangleCount(geometry);
   });
 
   const box = new THREE.Box3().setFromObject(object);
@@ -221,6 +253,85 @@ function collectMeshes(object) {
     child.userData.originalMaterial = child.material;
     meshRecords.push(child);
   });
+}
+
+function clearSelection() {
+  selectedMesh = null;
+  if (selectionBox) {
+    scene.remove(selectionBox);
+    selectionBox.geometry?.dispose?.();
+    selectionBox = null;
+  }
+  if (selectionPanel) selectionPanel.hidden = true;
+}
+
+function updateSelectionPanel(mesh) {
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+
+  selectedName.textContent = mesh.name || "Unnamed mesh";
+  selectedType.textContent = /pellet/i.test(mesh.name) ? "Pellet" : "Mesh";
+  selectedTriangles.textContent = formatNumber(getTriangleCount(mesh.geometry));
+  selectedSize.textContent = formatVector(size);
+  selectedPosition.textContent = formatVector(center);
+  selectionPanel.hidden = false;
+}
+
+function selectMesh(mesh) {
+  selectedMesh = mesh;
+  if (selectionBox) {
+    scene.remove(selectionBox);
+    selectionBox.geometry?.dispose?.();
+  }
+  selectionBox = new THREE.BoxHelper(mesh, 0x51f2df);
+  selectionBox.material = selectionMaterial;
+  selectionBox.renderOrder = 999;
+  scene.add(selectionBox);
+  updateSelectionPanel(mesh);
+  setStatus(`Selected ${mesh.name || "mesh"}`, 100);
+}
+
+function focusSelectedMesh() {
+  if (!selectedMesh) return;
+
+  const box = new THREE.Box3().setFromObject(selectedMesh);
+  const center = new THREE.Vector3();
+  const size = new THREE.Vector3();
+  box.getCenter(center);
+  box.getSize(size);
+
+  const distance = getFrameDistance(size) * 1.15;
+  const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+  camera.position.copy(center).add(direction.multiplyScalar(distance));
+  controls.target.copy(center);
+  camera.near = Math.max(distance / 100, 0.01);
+  camera.far = Math.max(distance * 120, camera.far);
+  camera.updateProjectionMatrix();
+  controls.update();
+}
+
+function pickMesh(event) {
+  if (!currentModel || !pointerStart) return;
+  const moved = Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y);
+  pointerStart = null;
+  if (moved > 6) return;
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+  raycaster.setFromCamera(pointer, camera);
+
+  const hits = raycaster.intersectObjects(meshRecords, false);
+  const hit = hits.find((item) => item.object.visible && isSelectableMesh(item.object));
+  if (hit) {
+    selectMesh(hit.object);
+  } else {
+    clearSelection();
+    setStatus(dropRecords.length ? `${dropRecords.length} pellets - Spacebar to drop` : "Ready", 100);
+  }
 }
 
 function seededRandom(seed) {
@@ -323,6 +434,9 @@ function updateDropAnimation() {
     dropStartedAt = null;
     setStatus("Ready - Spacebar to replay", 100);
   }
+
+  if (selectionBox) selectionBox.update();
+  if (selectedMesh) updateSelectionPanel(selectedMesh);
 }
 
 function applyWireframe(enabled) {
@@ -413,6 +527,11 @@ function bindUi() {
   document.querySelector("#loadButton").addEventListener("click", () => fileInput.click());
   document.querySelector("#resetButton").addEventListener("click", resetView);
   document.querySelector("#shotButton").addEventListener("click", saveScreenshot);
+  focusSelectedButton.addEventListener("click", focusSelectedMesh);
+  clearSelectedButton.addEventListener("click", () => {
+    clearSelection();
+    setStatus(dropRecords.length ? `${dropRecords.length} pellets - Spacebar to drop` : "Ready", 100);
+  });
   settingsButton.addEventListener("click", () => {
     setSettingsPanelOpen(!settingsPanel.classList.contains("open"));
   });
@@ -426,6 +545,10 @@ function bindUi() {
   });
 
   fileInput.addEventListener("change", (event) => openLocalFile(event.target.files?.[0]));
+  renderer.domElement.addEventListener("pointerdown", (event) => {
+    pointerStart = { x: event.clientX, y: event.clientY };
+  });
+  renderer.domElement.addEventListener("pointerup", pickMesh);
   window.addEventListener("keydown", (event) => {
     if (event.code !== "Space") return;
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement) return;
@@ -522,6 +645,7 @@ function resize() {
 function animate() {
   requestAnimationFrame(animate);
   updateDropAnimation();
+  if (selectionBox) selectionBox.update();
   controls.update();
   renderer.render(scene, camera);
 }
