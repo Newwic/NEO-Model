@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NEO 3D Viewer</title>
+    <title>NEO-Model</title>
     <link rel="stylesheet" href="./styles.css" />
     <script type="importmap">
       {
@@ -22,9 +22,15 @@
         <div class="identity">
           <span class="mark" aria-hidden="true"></span>
           <div>
-            <h1>NEO 3D Viewer</h1>
+            <h1>NEO-Model</h1>
             <p id="modelName">Untitled model</p>
           </div>
+        </div>
+
+        <div class="view-switch" role="tablist" aria-label="View mode">
+          <button class="view-chip active" type="button" data-view="viewer" aria-pressed="true">3D</button>
+          <button class="view-chip" type="button" data-view="animation" aria-pressed="false">Animation</button>
+          <button class="view-chip" type="button" data-view="assets" aria-pressed="false">Assets</button>
         </div>
 
         <div class="icon-row">
@@ -114,6 +120,100 @@
             <dd id="sizeValue">-</dd>
           </div>
         </dl>
+      </section>
+
+      <section class="media-panel" id="animationPanel" aria-label="Animation frames">
+        <div class="panel-titlebar media-titlebar">
+          <span>Animation</span>
+          <button class="panel-close" id="closeAnimationButton" type="button" title="Close animation">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="preset-row" aria-label="Animation presets">
+          <button class="preset-btn" type="button" data-preset="scissors">Scissors Demo</button>
+          <button class="preset-btn" type="button" data-preset="green">Green Demo</button>
+          <button class="preset-btn" type="button" data-preset="blank">Blank Demo</button>
+        </div>
+        <p class="panel-copy">ใส่ภาพเฟรมได้ 4-6 ภาพ เพื่อทำ motion demo หรือ video storyboard</p>
+        <div class="frame-strip" id="frameStrip">
+          <label class="frame-slot">
+            <span>Frame 1</span>
+            <input type="file" accept="image/*" data-frame-index="0" />
+            <img alt="Frame 1 preview" />
+          </label>
+          <label class="frame-slot">
+            <span>Frame 2</span>
+            <input type="file" accept="image/*" data-frame-index="1" />
+            <img alt="Frame 2 preview" />
+          </label>
+          <label class="frame-slot">
+            <span>Frame 3</span>
+            <input type="file" accept="image/*" data-frame-index="2" />
+            <img alt="Frame 3 preview" />
+          </label>
+          <label class="frame-slot">
+            <span>Frame 4</span>
+            <input type="file" accept="image/*" data-frame-index="3" />
+            <img alt="Frame 4 preview" />
+          </label>
+          <label class="frame-slot">
+            <span>Frame 5</span>
+            <input type="file" accept="image/*" data-frame-index="4" />
+            <img alt="Frame 5 preview" />
+          </label>
+          <label class="frame-slot">
+            <span>Frame 6</span>
+            <input type="file" accept="image/*" data-frame-index="5" />
+            <img alt="Frame 6 preview" />
+          </label>
+        </div>
+        <div class="animation-player">
+          <div class="animation-stage">
+            <img id="animationPreview" alt="Animation preview" />
+          </div>
+          <div class="animation-controls">
+            <button class="anim-btn primary" id="playAnimationButton" type="button" aria-keyshortcuts="Space" title="Play / Pause with Spacebar">Play</button>
+            <button class="anim-btn" id="clearAnimationButton" type="button">Clear</button>
+            <label class="toggle inline">
+              <input id="loopToggle" type="checkbox" checked />
+              <span>Loop</span>
+            </label>
+            <label class="slider-row inline" for="speedSlider">
+              <span>Speed</span>
+              <output id="speedValue">220ms</output>
+            </label>
+            <input id="speedSlider" min="80" max="600" step="10" value="220" type="range" />
+          </div>
+        </div>
+      </section>
+
+      <section class="media-panel assets-panel" id="assetsPanel" aria-label="Asset slots">
+        <div class="panel-titlebar media-titlebar">
+          <span>Assets</span>
+          <button class="panel-close" id="closeAssetsButton" type="button" title="Close assets">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <p class="panel-copy">เอาไฟล์ image / glb / gif มาวางไว้ใน `assets/` แล้วอัปเดตลิงก์ได้ทีหลัง</p>
+        <div class="asset-grid">
+          <a class="asset-card" href="./assets/model.glb" download>
+            <strong>Main GLB</strong>
+            <span>assets/model.glb</span>
+          </a>
+          <a class="asset-card" href="./assets/source.blend" download>
+            <strong>Source Blend</strong>
+            <span>assets/source.blend</span>
+          </a>
+          <label class="asset-card upload-card">
+            <strong>Add Image</strong>
+            <span>PNG / JPG / GIF</span>
+            <input id="assetInput" type="file" accept="image/*,.gif,.glb,.gltf" hidden />
+          </label>
+          <div class="asset-card hint-card">
+            <strong>Tip</strong>
+            <span>ลากรูปเข้าเว็บได้ด้วย</span>
+          </div>
+        </div>
       </section>
 
       <footer class="status-bar">
