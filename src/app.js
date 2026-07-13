@@ -80,11 +80,15 @@ grid.material.opacity = 0.32;
 grid.position.y = 0.002;
 scene.add(grid);
 
+const clock = new THREE.Clock();
 let currentModel = null;
 let currentObjectUrl = null;
 let currentMode = "original";
 let resizeTimer = null;
 const meshRecords = [];
+const dropRecords = [];
+let dropStartedAt = null;
+let dropDuration = 0;
 
 const studioMaterial = new THREE.MeshStandardMaterial({
   color: 0xdcd6c7,
@@ -135,6 +139,9 @@ function clearModel() {
     currentModel = null;
   }
   meshRecords.length = 0;
+  dropRecords.length = 0;
+  dropStartedAt = null;
+  dropDuration = 0;
 }
 
 function formatNumber(value) {
@@ -216,6 +223,108 @@ function collectMeshes(object) {
   });
 }
 
+function seededRandom(seed) {
+  const value = Math.sin(seed * 9283.17) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function easeOutCubic(value) {
+  return 1 - Math.pow(1 - value, 3);
+}
+
+function collectDropObjects(object) {
+  dropRecords.length = 0;
+  const pellets = [];
+  object.traverse((child) => {
+    if (!child.isMesh || !/pellet/i.test(child.name)) return;
+    pellets.push(child);
+  });
+
+  if (!pellets.length) return;
+
+  const pileBox = new THREE.Box3();
+  for (const pellet of pellets) pileBox.expandByObject(pellet);
+
+  const pileSize = new THREE.Vector3();
+  const pileCenter = new THREE.Vector3();
+  pileBox.getSize(pileSize);
+  pileBox.getCenter(pileCenter);
+
+  const floorY = pileBox.min.y;
+  const spreadRadius = Math.max(pileSize.x, pileSize.z, 0.8) * 1.25;
+  const settleHeight = Math.max(pileSize.y * 0.055, 0.035);
+
+  pellets.forEach((pellet, index) => {
+    const angle = seededRandom(index + 1) * Math.PI * 2;
+    const radius = Math.sqrt(seededRandom(index + 31)) * spreadRadius;
+    const layer = Math.floor(index / Math.max(18, Math.sqrt(pellets.length)));
+    const delay = seededRandom(index + 71) * 0.45;
+    const duration = 1.45 + seededRandom(index + 101) * 0.8;
+
+    dropRecords.push({
+      object: pellet,
+      startPosition: pellet.position.clone(),
+      targetPosition: new THREE.Vector3(
+        pileCenter.x + Math.cos(angle) * radius,
+        floorY + (layer % 8) * settleHeight * 0.22 + seededRandom(index + 13) * settleHeight,
+        pileCenter.z + Math.sin(angle) * radius,
+      ),
+      startRotation: pellet.rotation.clone(),
+      targetRotation: new THREE.Euler(
+        pellet.rotation.x + (seededRandom(index + 151) - 0.5) * Math.PI * 3,
+        pellet.rotation.y + (seededRandom(index + 181) - 0.5) * Math.PI * 3,
+        pellet.rotation.z + (seededRandom(index + 211) - 0.5) * Math.PI * 3,
+      ),
+      delay,
+      duration,
+    });
+    dropDuration = Math.max(dropDuration, delay + duration);
+  });
+}
+
+function resetDropObjects() {
+  for (const record of dropRecords) {
+    record.object.position.copy(record.startPosition);
+    record.object.rotation.copy(record.startRotation);
+  }
+  dropStartedAt = null;
+}
+
+function startDropAnimation() {
+  if (!dropRecords.length) {
+    setStatus("No pellet animation found", 100);
+    statusText.style.color = "var(--danger)";
+    return;
+  }
+
+  resetDropObjects();
+  dropStartedAt = clock.getElapsedTime();
+  controls.autoRotate = false;
+  document.querySelector("#rotateToggle").checked = false;
+  setStatus("Dropping media", 100);
+}
+
+function updateDropAnimation() {
+  if (dropStartedAt === null) return;
+
+  const elapsed = clock.getElapsedTime() - dropStartedAt;
+  for (const record of dropRecords) {
+    const progress = THREE.MathUtils.clamp((elapsed - record.delay) / record.duration, 0, 1);
+    const eased = easeOutCubic(progress);
+    record.object.position.lerpVectors(record.startPosition, record.targetPosition, eased);
+    record.object.rotation.set(
+      THREE.MathUtils.lerp(record.startRotation.x, record.targetRotation.x, eased),
+      THREE.MathUtils.lerp(record.startRotation.y, record.targetRotation.y, eased),
+      THREE.MathUtils.lerp(record.startRotation.z, record.targetRotation.z, eased),
+    );
+  }
+
+  if (elapsed >= dropDuration) {
+    dropStartedAt = null;
+    setStatus("Ready - Spacebar to replay", 100);
+  }
+}
+
 function applyWireframe(enabled) {
   for (const mesh of meshRecords) {
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
@@ -252,11 +361,15 @@ function loadModel(url, name = "Untitled model") {
       currentModel = object;
       scene.add(object);
       collectMeshes(object);
+      collectDropObjects(object);
       frameObject(object);
       updateStats(object);
       applyMode(currentMode);
       modelName.textContent = name;
-      setStatus("Ready", 100);
+      setStatus(dropRecords.length ? `${dropRecords.length} pellets - Spacebar to drop` : "Ready", 100);
+      if (dropRecords.length && window.location.hash === "#drop") {
+        window.setTimeout(startDropAnimation, 250);
+      }
     },
     (event) => {
       if (!event.total) {
@@ -276,7 +389,9 @@ function loadModel(url, name = "Untitled model") {
 
 function resetView() {
   if (!currentModel) return;
+  resetDropObjects();
   frameObject(currentModel);
+  setStatus(dropRecords.length ? `${dropRecords.length} pellets - Spacebar to drop` : "Ready", 100);
 }
 
 function saveScreenshot() {
@@ -311,6 +426,12 @@ function bindUi() {
   });
 
   fileInput.addEventListener("change", (event) => openLocalFile(event.target.files?.[0]));
+  window.addEventListener("keydown", (event) => {
+    if (event.code !== "Space") return;
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement) return;
+    event.preventDefault();
+    startDropAnimation();
+  });
 
   document.querySelector("#rotateToggle").addEventListener("change", (event) => {
     controls.autoRotate = event.target.checked;
@@ -380,6 +501,9 @@ function setSettingsPanelOpen(open) {
 
 function syncPanelFromHash() {
   setSettingsPanelOpen(window.location.hash === "#settings");
+  if (currentModel && dropRecords.length && window.location.hash === "#drop") {
+    startDropAnimation();
+  }
 }
 
 function resize() {
@@ -397,6 +521,7 @@ function resize() {
 
 function animate() {
   requestAnimationFrame(animate);
+  updateDropAnimation();
   controls.update();
   renderer.render(scene, camera);
 }
