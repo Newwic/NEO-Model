@@ -1,6 +1,6 @@
 # NEO-Model
 
-Static Three.js viewer for the GLB model uploaded on 2026-07-09.
+Minimal static animation page for the generated NEO model frames.
 
 Live site:
 
@@ -23,31 +23,20 @@ http://127.0.0.1:5177/
 
 ## Files
 
-- `assets/model.glb` - model shown on the page.
-- `assets/source.blend` - original Blender source file from the upload.
-- `index.html`, `styles.css`, `src/app.js` - viewer page.
+- `assets/frame-1.png` to `assets/frame-6.png` - animation frames.
+- `index.html`, `styles.css`, `src/app.js` - fullscreen animation page.
+- `assets/model.glb` and `assets/source.blend` - kept as source assets.
 
 ## Features
 
-- `3D` view for GLB preview.
-- `Animation` view for 4-6 frame image sequences.
-- Spacebar toggles animation playback with the included demo frames.
-- `Assets` view for quick links and future uploads.
-- Mobile drawer for settings and media panels.
-- Drag and drop GLB or image files directly onto the page.
-
-## Mobile
-
-- The model opens full-screen first.
-- Tap the sliders icon to open settings.
-- Add `#settings` to the URL to open the settings drawer directly.
+- No visible UI controls.
+- Shows the first animation frame on load.
+- Press `Spacebar` to play or pause the animation.
 
 ## Add your own files
 
 Put files into `assets/` and update links as needed:
 
-- `assets/model.glb`
-- `assets/source.blend`
 - `assets/frame-1.png`
 - `assets/frame-2.png`
 - `assets/frame-3.png`
